@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>一周七练 - 健身打卡</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>if(new URLSearchParams(location.search).get('reset')==='1'){localStorage.clear();location.href=location.pathname;}</script>
+</head>
+<body>
+    <!-- 登录/注册页面 -->
+    <div id="auth-page" class="auth-container">
+        <div class="auth-logo">💪</div>
+        <h1 class="auth-title">一周七练</h1>
+        <p class="auth-subtitle">记录你的健身每一天</p>
+        
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="switchAuthTab('login')">登录</button>
+            <button class="auth-tab" onclick="switchAuthTab('register')">注册</button>
+        </div>
+        
+        <!-- 登录表单 -->
+        <div id="login-form" class="auth-form">
+            <input type="text" id="login-username" class="auth-input" placeholder="用户名">
+            <input type="password" id="login-password" class="auth-input" placeholder="密码">
+            <button class="btn-primary" onclick="handleLogin()">登录</button>
+        </div>
+        
+        <!-- 注册表单 -->
+        <div id="register-form" class="auth-form" style="display:none;">
+            <input type="text" id="reg-username" class="auth-input" placeholder="设置用户名">
+            <input type="password" id="reg-password" class="auth-input" placeholder="设置密码">
+            <input type="password" id="reg-password-confirm" class="auth-input" placeholder="确认密码">
+            <button class="btn-primary" onclick="handleRegister()">注册</button>
+        </div>
+        
+        <p id="auth-error" class="auth-error"></p>
+    </div>
+
+    <!-- 应用容器 -->
+    <div id="app" style="display:none;">
+        <!-- 顶部状态栏 -->
+        <header class="app-header">
+            <h1 id="page-title">一周七练</h1>
+        </header>
+
+        <!-- 页面内容区 -->
+        <main class="page-container">
+            <!-- 首页 -->
+            <section id="page-home" class="page active">
+                <!-- 顶部概览卡片 -->
+                <div style="display:flex;gap:10px;align-items:stretch;margin-bottom:20px;">
+                    <!-- 今日训练卡片 -->
+                    <div class="stat-card workout-card" style="min-width:110px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:16px 10px;">
+                        <div class="stat-icon">💪</div>
+                        <div class="stat-value" id="today-workout" style="font-size:18px;">未完成</div>
+                        <div class="stat-label">今日训练</div>
+                    </div>
+                    <!-- 热量统计卡片 -->
+                    <div style="flex:1;background:#fff;border-radius:14px;padding:14px;display:flex;gap:8px;box-shadow:var(--shadow);">
+                        <div style="flex:1;text-align:center;">
+                            <div style="font-size:12px;color:#86868b;">摄入</div>
+                            <div style="font-size:18px;font-weight:600;color:#ff9500;margin-top:2px;" id="today-intake">0</div>
+                            <div style="font-size:10px;color:#aeaeb2;">千卡</div>
+                        </div>
+                        <div style="width:1px;background:#e5e5ea;"></div>
+                        <div style="flex:1;text-align:center;">
+                            <div style="font-size:12px;color:#86868b;">消耗</div>
+                            <div style="font-size:18px;font-weight:600;color:#007aff;margin-top:2px;" id="today-burned">0</div>
+                            <div style="font-size:10px;color:#aeaeb2;">千卡</div>
+                        </div>
+                        <div style="width:1px;background:#e5e5ea;"></div>
+                        <div style="flex:1;text-align:center;">
+                            <div style="font-size:12px;color:#86868b;">热量差</div>
+                            <div style="font-size:18px;font-weight:600;color:#34c759;margin-top:2px;" id="today-balance">0</div>
+                            <div style="font-size:10px;color:#aeaeb2;">千卡</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 训练打卡 -->
+                <div class="contribution-calendar" id="contribution-calendar" style="margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <span style="font-size:17px;font-weight:600;color:#1d1d1f;">训练活跃度</span>
+                        <div class="calendar-range-btns">
+                            <button class="range-btn active" onclick="switchCalendarRange(13, this)">近1月</button>
+                            <button class="range-btn" onclick="switchCalendarRange(13*3, this)">近3月</button>
+                            <button class="range-btn" onclick="switchCalendarRange(52, this)">近1年</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                        <span style="font-size:11px;color:#86868b;">少</span>
+                        <div class="legend-box level-0"></div>
+                        <div class="legend-box level-1"></div>
+                        <div class="legend-box level-2"></div>
+                        <div class="legend-box level-3"></div>
+                        <div class="legend-box level-4"></div>
+                        <span style="font-size:11px;color:#86868b;">多</span>
+                    </div>
+                    <div class="calendar-graph" id="calendar-graph"></div>
+                </div>
+
+                <div style="background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow);">
+                    <div style="font-size:17px;font-weight:600;color:#1d1d1f;margin-bottom:12px;">今日训练计划</div>
+                    <div id="today-workout-list">
+                        <p style="text-align:center;color:#86868b;font-size:14px;padding:16px 0;">今日暂无训练计划</p>
+                    </div>
+                </div>
+
+                <!-- 能量分析 -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span style="font-size:17px;font-weight:600;color:#1d1d1f;">能量分析</span>
+                    <div class="calendar-range-btns">
+                        <button class="range-btn active" onclick="switchEnergyRange(7, this)">7天</button>
+                        <button class="range-btn" onclick="switchEnergyRange(14, this)">14天</button>
+                        <button class="range-btn" onclick="switchEnergyRange(30, this)">30天</button>
+                    </div>
+                </div>
+                <div class="chart-card" style="height:200px;">
+                    <canvas id="energy-chart"></canvas>
+                </div>
+
+                <!-- 饮食数据分析 -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span style="font-size:17px;font-weight:600;color:#1d1d1f;">饮食数据分析</span>
+                    <div class="calendar-range-btns diet-range-btns">
+                        <button class="range-btn active" onclick="switchDietRange(7, this)">7日</button>
+                        <button class="range-btn" onclick="switchDietRange(15, this)">半月</button>
+                        <button class="range-btn" onclick="switchDietRange(30, this)">1月</button>
+                        <button class="range-btn" onclick="switchDietRange(90, this)">3月</button>
+                        <button class="range-btn" onclick="switchDietRange(365, this)">1年</button>
+                    </div>
+                </div>
+                <!-- 摄入总量统计 -->
+                <div id="diet-stats" style="display:flex;justify-content:space-around;background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+                    <div style="text-align:center;">
+                        <div style="font-size:12px;color:#86868b;">蛋白质</div>
+                        <div style="font-size:20px;font-weight:600;color:#ff3b30;" id="diet-total-protein">0g</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:12px;color:#86868b;">碳水</div>
+                        <div style="font-size:20px;font-weight:600;color:#ff9500;" id="diet-total-carb">0g</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:12px;color:#86868b;">脂肪</div>
+                        <div style="font-size:20px;font-weight:600;color:#34c759;" id="diet-total-fat">0g</div>
+                    </div>
+                </div>
+                <div class="chart-card" style="height:220px;">
+                    <canvas id="diet-chart"></canvas>
+                </div>
+            </section>
+
+            <!-- 训练页 -->
+            <section id="page-workout" class="page">
+                <div class="workout-categories" style="margin-bottom:20px;">
+                    <button class="category-card" onclick="showWorkoutList('chest')">
+                        <span class="cat-icon">🏋️</span>
+                        <span class="cat-name">胸部</span>
+                    </button>
+                    <button class="category-card" onclick="showWorkoutList('back')">
+                        <span class="cat-icon">🔙</span>
+                        <span class="cat-name">背部</span>
+                    </button>
+                    <button class="category-card" onclick="showWorkoutList('shoulder')">
+                        <span class="cat-icon">💪</span>
+                        <span class="cat-name">肩部</span>
+                    </button>
+                    <button class="category-card" onclick="showWorkoutList('arms')">
+                        <span class="cat-icon">💪</span>
+                        <span class="cat-name">手臂</span>
+                    </button>
+                    <button class="category-card" onclick="showWorkoutList('legs')">
+                        <span class="cat-icon">🦵</span>
+                        <span class="cat-name">腿部</span>
+                    </button>
+                    <button class="category-card" onclick="showWorkoutList('core')">
+                        <span class="cat-icon">🎯</span>
+                        <span class="cat-name">核心</span>
+                    </button>
+                    <button class="category-card" onclick="showWorkoutList('cardio')">
+                        <span class="cat-icon">🏃</span>
+                        <span class="cat-name">有氧</span>
+                    </button>
+                </div>
+
+                <div class="workout-detail" id="workout-detail" style="display:none;margin-bottom:20px;">
+                    <button class="btn-back" onclick="hideWorkoutDetail()">← 返回</button>
+                    <h2 id="workout-category-title" style="font-size:20px;font-weight:600;margin-bottom:16px;"></h2>
+                    <div class="exercise-list" id="exercise-list"></div>
+                </div>
+
+                <div style="background:#fff;border-radius:14px;padding:18px;box-shadow:var(--shadow);">
+                    <div style="font-size:17px;font-weight:600;color:#1d1d1f;margin-bottom:14px;">我的训练计划</div>
+                    <button class="btn-add" onclick="showAddPlan()" style="margin-bottom:14px;">+ 添加训练动作</button>
+                    <div id="plan-list" class="plan-list"></div>
+                </div>
+            </section>
+
+            <!-- 饮食页 -->
+            <section id="page-meal" class="page">
+                <!-- 今日摄入概览 -->
+                <div style="background:#fff;border-radius:14px;padding:16px 12px;margin-bottom:16px;box-shadow:var(--shadow);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div style="text-align:center;flex:1;">
+                            <div style="font-size:12px;color:#86868b;">蛋白质</div>
+                            <div style="font-size:20px;font-weight:600;color:#ff3b30;" id="protein-val">0<span style="font-size:12px;font-weight:400;">g</span></div>
+                        </div>
+                        <div style="width:1px;height:40px;background:#e5e5ea;"></div>
+                        <div style="text-align:center;flex:1;">
+                            <div style="font-size:12px;color:#86868b;">碳水</div>
+                            <div style="font-size:20px;font-weight:600;color:#ff9500;" id="carb-val">0<span style="font-size:12px;font-weight:400;">g</span></div>
+                        </div>
+                        <div style="width:1px;height:40px;background:#e5e5ea;"></div>
+                        <div style="text-align:center;flex:1;">
+                            <div style="font-size:12px;color:#86868b;">脂肪</div>
+                            <div style="font-size:20px;font-weight:600;color:#34c759;" id="fat-val">0<span style="font-size:12px;font-weight:400;">g</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 记录饮食 -->
+                <div style="background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
+                    <div style="font-size:17px;font-weight:600;color:#1d1d1f;margin-bottom:16px;">记录饮食</div>
+                    <input type="text" id="meal-name" placeholder="食物名称（如：鸡胸肉）" class="input-field">
+                    
+                    <div style="display:flex;gap:10px;margin-bottom:10px;">
+                        <input type="number" id="meal-weight" placeholder="重量(g)" class="input-field" style="flex:1;">
+                        <select id="meal-cook-method" class="input-field" style="flex:1;">
+                            <option value="raw">生食</option>
+                            <option value="boiled">水煮</option>
+                            <option value="steamed">清蒸</option>
+                            <option value="stirfried">炒</option>
+                            <option value="fried">油炸</option>
+                            <option value="roasted">烤</option>
+                            <option value="braised">红烧</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-bottom:10px;">
+                        <input type="number" id="meal-cal" placeholder="热量(千卡)" class="input-field" style="flex:1;">
+                        <input type="number" id="meal-protein" placeholder="蛋白质(g)" class="input-field" style="flex:1;">
+                    </div>
+                    <div style="display:flex;gap:10px;margin-bottom:14px;">
+                        <input type="number" id="meal-carb" placeholder="碳水(g)" class="input-field" style="flex:1;">
+                        <input type="number" id="meal-fat" placeholder="脂肪(g)" class="input-field" style="flex:1;">
+                    </div>
+                    <div class="meal-type-row" style="display:flex;gap:10px;margin-bottom:14px;">
+                        <label class="meal-type"><input type="radio" name="meal-type" value="breakfast" checked> 早餐</label>
+                        <label class="meal-type"><input type="radio" name="meal-type" value="lunch"> 午餐</label>
+                        <label class="meal-type"><input type="radio" name="meal-type" value="dinner"> 晚餐</label>
+                        <label class="meal-type"><input type="radio" name="meal-type" value="snack"> 加餐</label>
+                    </div>
+                    <button class="btn-primary" onclick="addMeal()">添加记录</button>
+                </div>
+
+                <!-- 今日饮食记录 -->
+                <div style="background:#fff;border-radius:14px;padding:18px;box-shadow:var(--shadow);">
+                    <div style="font-size:17px;font-weight:600;color:#1d1d1f;margin-bottom:14px;">今日饮食记录</div>
+                    <div id="meal-list" class="meal-list"></div>
+                </div>
+            </section>
+
+            <!-- AI 聊天页 -->
+            <section id="page-ai" class="page">
+                <div class="chat-container" id="chat-container">
+                    <div class="chat-welcome">
+                        <div class="ai-avatar">🤖</div>
+                        <h3>FitCheck AI 健身助手</h3>
+                        <p>我是你的私人健身顾问，可以回答关于训练、饮食、恢复等方面的问题。</p>
+                        <div class="quick-questions">
+                            <button class="btn-quick" onclick="sendQuickQ('新手应该怎么开始健身？')">新手怎么开始？</button>
+                            <button class="btn-quick" onclick="sendQuickQ('减脂期间应该怎么吃？')">减脂怎么吃？</button>
+                            <button class="btn-quick" onclick="sendQuickQ('胸肌训练推荐')">胸肌训练</button>
+                            <button class="btn-quick" onclick="sendQuickQ('训练后怎么恢复？')">训练后恢复</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="输入你的健身问题..." class="chat-input" onkeypress="if(event.key==='Enter')sendChat()">
+                    <button class="btn-send" onclick="sendChat()">发送</button>
+                </div>
+            </section>
+
+            <!-- 我的页 -->
+            <section id="page-profile" class="page">
+                <!-- 用户信息头部 -->
+                <div style="text-align:center;padding:20px 0 30px;">
+                    <div style="width:80px;height:80px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:36px;">💪</div>
+                    <h2 id="user-name" style="font-size:24px;font-weight:600;margin:0 0 4px;color:#1d1d1f;">健身达人</h2>
+                    <p id="user-goal" style="font-size:14px;color:#86868b;margin:0;">增肌减脂</p>
+                </div>
+
+                <!-- 数据概览卡片 -->
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
+                    <div style="background:#f5f5f7;border-radius:12px;padding:16px 12px;text-align:center;">
+                        <div style="font-size:28px;font-weight:600;color:#1d1d1f;" id="total-checkins">0</div>
+                        <div style="font-size:12px;color:#86868b;margin-top:4px;">总打卡</div>
+                    </div>
+                    <div style="background:#f5f5f7;border-radius:12px;padding:16px 12px;text-align:center;">
+                        <div style="font-size:28px;font-weight:600;color:#1d1d1f;" id="total-workouts">0</div>
+                        <div style="font-size:12px;color:#86868b;margin-top:4px;">总训练</div>
+                    </div>
+                    <div style="background:#f5f5f7;border-radius:12px;padding:16px 12px;text-align:center;">
+                        <div style="font-size:28px;font-weight:600;color:#1d1d1f;" id="max-streak">0</div>
+                        <div style="font-size:12px;color:#86868b;margin-top:4px;">最长连续</div>
+                    </div>
+                </div>
+
+                <!-- 个人信息 -->
+                <div style="background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;" onclick="toggleProfileForm()">
+                        <span style="font-size:17px;font-weight:600;color:#1d1d1f;">个人信息</span>
+                        <span id="profile-toggle-icon" style="color:#86868b;font-size:14px;">▶</span>
+                    </div>
+                    <div id="profile-form-container" style="display:none;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="font-size:13px;color:#86868b;display:block;margin-bottom:6px;">昵称</label>
+                                <input type="text" id="input-name" class="apple-input" value="健身达人" oninput="saveProfileOnInput()">
+                            </div>
+                            <div>
+                                <label style="font-size:13px;color:#86868b;display:block;margin-bottom:6px;">健身目标</label>
+                                <select id="input-goal" class="apple-input" onchange="saveProfileOnInput()">
+                                    <option value="增肌">增肌</option>
+                                    <option value="减脂">减脂</option>
+                                    <option value="塑形">塑形</option>
+                                    <option value="保持健康">保持健康</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:13px;color:#86868b;display:block;margin-bottom:6px;">身高 (cm)</label>
+                                <input type="number" id="input-height" class="apple-input" placeholder="170" oninput="saveProfileOnInput()">
+                            </div>
+                            <div>
+                                <label style="font-size:13px;color:#86868b;display:block;margin-bottom:6px;">体重 (kg)</label>
+                                <input type="number" id="input-weight" class="apple-input" placeholder="70" oninput="saveProfileOnInput()">
+                            </div>
+                            <div style="grid-column:span 2;">
+                                <label style="font-size:13px;color:#86868b;display:block;margin-bottom:6px;">每日热量目标 (千卡)</label>
+                                <input type="number" id="input-calorie-goal" class="apple-input" placeholder="2000" value="2000" oninput="saveProfileOnInput()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 身体数据 -->
+                <div style="background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="font-size:17px;font-weight:600;color:#1d1d1f;margin-bottom:16px;">身体数据</div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+                        <input type="date" id="body-data-date" class="apple-input" style="grid-column:span 3;">
+                        <input type="number" id="input-body-weight" class="apple-input" placeholder="体重" step="0.1">
+                        <input type="number" id="input-body-fat" class="apple-input" placeholder="体脂%" step="0.1">
+                        <input type="number" id="input-body-muscle" class="apple-input" placeholder="骨骼肌" step="0.1">
+                    </div>
+                    <button onclick="addBodyData()" style="width:100%;background:#007aff;color:#fff;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:500;cursor:pointer;">记录数据</button>
+                    
+                    <div id="body-data-list" style="margin-top:16px;"></div>
+                    
+                    <div id="body-data-chart-container" style="margin-top:16px;height:180px;">
+                        <canvas id="body-data-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 数据备份 -->
+                <div style="background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);">
+                    <div style="font-size:17px;font-weight:600;color:#1d1d1f;margin-bottom:16px;">数据备份</div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="exportData()" style="flex:1;background:#007aff;color:#fff;border:none;border-radius:10px;padding:12px;font-size:15px;cursor:pointer;">📥 导出数据</button>
+                        <button onclick="importData()" style="flex:1;background:#34c759;color:#fff;border:none;border-radius:10px;padding:12px;font-size:15px;cursor:pointer;">📤 导入数据</button>
+                    </div>
+                    <p style="font-size:12px;color:#86868b;margin-top:12px;text-align:center;">建议每周导出备份，保存到微信收藏或邮件</p>
+                </div>
+
+                <!-- 清除数据 -->
+                <div style="text-align:center;margin-top:30px;">
+                    <button onclick="clearAllData()" style="background:none;border:none;color:#ff3b30;font-size:13px;cursor:pointer;">清除所有数据</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- 底部导航栏 -->
+        <nav class="tab-bar">
+            <button class="tab-item" onclick="switchTab('meal', this)">
+                <span class="tab-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/>
+                    </svg>
+                </span>
+                <span class="tab-label">饮食</span>
+            </button>
+            <button class="tab-item" onclick="switchTab('workout', this)">
+                <span class="tab-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6.5 6.5h11M6.5 17.5h11M3.5 12h17M5 6.5V5a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v1.5M15 17.5V19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-1.5"/>
+                    </svg>
+                </span>
+                <span class="tab-label">训练</span>
+            </button>
+            <button class="tab-item active" onclick="switchTab('home', this)">
+                <span class="tab-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                </span>
+                <span class="tab-label">首页</span>
+            </button>
+            <button class="tab-item" onclick="switchTab('ai', this)">
+                <span class="tab-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                </span>
+                <span class="tab-label">AI助手</span>
+            </button>
+            <button class="tab-item" onclick="switchTab('profile', this)">
+                <span class="tab-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </span>
+                <span class="tab-label">我的</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="js/data.js?v=2"></script>
+    <script src="js/storage.js?v=2"></script>
+    <script src="js/ai.js?v=2"></script>
+    <script src="js/app.js?v=2"></script>
+</body>
+</html>
