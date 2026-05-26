@@ -1,106 +1,111 @@
-// ========== AI 聊天功能 ==========
-const AIResponses = {
-    '新手': `新手健身建议：
-1. 从基础动作开始：深蹲、俯卧撑、引体向上
-2. 每周训练3-4次，每次45-60分钟
-3. 注重动作质量，不要追求大重量
-4. 保证充足睡眠和蛋白质摄入
-5. 坚持记录训练数据，循序渐进`,
+// ========== AI 健身助手模块 ==========
+const FitAI = {
+    /**
+     * 处理用户输入，返回 AI 回复
+     * @param {string} input 用户输入
+     * @returns {string} AI 回复
+     */
+    process(input) {
+        if (!input || input.trim() === '') {
+            return '请输入你的健身问题，我会尽力回答！😊';
+        }
 
-    '减脂': `减脂饮食建议：
-1. 控制总热量，制造300-500千卡缺口
-2. 高蛋白饮食：每公斤体重1.6-2g蛋白质
-3. 多吃蔬菜，增加饱腹感
-4. 减少精制碳水，选择粗粮
-5. 多喝水，每天2-3升
-6. 避免含糖饮料和酒精`,
+        const text = input.trim().toLowerCase();
 
-    '胸肌': `胸肌训练推荐：
-1. 杠铃卧推 - 4组×8-12次
-2. 哑铃飞鸟 - 3组×12-15次
-3. 上斜哑铃推举 - 3组×10-12次
-4. 双杠臂屈伸 - 3组×力竭
-5. 绳索夹胸 - 3组×15次
+        // 1. 检查是否是食物热量查询
+        const foodResult = this.searchFood(input);
+        if (foodResult) return foodResult;
 
-建议每周训练胸部1-2次`,
+        // 2. 关键词匹配知识库
+        const knowledgeResult = this.searchKnowledge(text);
+        if (knowledgeResult) return knowledgeResult;
 
-    '恢复': `训练后恢复建议：
-1. 训练后30分钟内补充蛋白质和碳水
-2. 保证每晚7-9小时睡眠
-3. 训练后拉伸放松肌肉
-4. 每周安排1-2天完全休息
-5. 可以泡澡或按摩促进血液循环
-6. 多喝水帮助代谢废物排出`,
+        // 3. 问候语
+        if (this.isGreeting(text)) {
+            return this.getGreetingResponse();
+        }
 
-    '蛋白': `蛋白质摄入建议：
-- 增肌期：每公斤体重1.6-2.2g
-- 减脂期：每公斤体重2-2.4g
-- 优质来源：鸡胸肉、鱼、蛋、牛肉、豆类
-- 建议分散到每餐，每次20-40g
-- 训练后30分钟内补充效果最佳`,
+        // 4. 鼓励语
+        if (this.isEncouragement(text)) {
+            return this.getEncouragement();
+        }
 
-    'default': `我是您的AI健身助手，可以回答：
-• 新手如何开始健身
-• 减脂期间怎么饮食
-• 各部位肌肉训练方法
-• 训练后如何恢复
-• 蛋白质怎么补充
+        // 5. 默认回复
+        return this.getDefaultResponse(input);
+    },
 
-请直接输入您的问题！`
+    // 搜索食物热量
+    searchFood(input) {
+        for (const [name, info] of Object.entries(FOOD_DATABASE)) {
+            if (input.includes(name)) {
+                return `📊 **${name}** 营养信息(${info.per})：\n\n` +
+                    `🔥 热量：${info.cal} 千卡\n` +
+                    `💪 蛋白质：${info.protein}g\n` +
+                    `🍚 碳水：${info.carb}g\n` +
+                    `🥑 脂肪：${info.fat}g\n\n` +
+                    `💡 提示：你可以把食物记录到饮食页面，我会帮你计算每日总摄入！`;
+            }
+        }
+        return null;
+    },
+
+    // 关键词匹配知识库
+    searchKnowledge(text) {
+        let bestMatch = null;
+        let bestScore = 0;
+
+        for (const item of AI_KNOWLEDGE) {
+            let score = 0;
+            for (const keyword of item.keywords) {
+                if (text.includes(keyword.toLowerCase())) {
+                    score += keyword.length; // 更长的关键词权重更高
+                }
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = item;
+            }
+        }
+
+        return bestMatch ? bestMatch.answer : null;
+    },
+
+    // 判断是否是问候
+    isGreeting(text) {
+        const greetings = ['你好', '嗨', 'hi', 'hello', '在吗', '在不在'];
+        return greetings.some(g => text === g || text === g + '！');
+    },
+
+    getGreetingResponse() {
+        const responses = [
+            '你好！我是你的 AI 健身助手 💪 有什么健身问题都可以问我！\n\n你可以问我关于：\n- 训练动作和计划\n- 饮食和营养\n- 减脂/增肌建议\n- 食物热量查询\n- 训练恢复',
+            '嗨！很高兴见到你！🤖\n\n今天准备练什么？我可以帮你推荐训练动作，或者回答任何健身相关的问题！',
+            '你好呀！健身达人！🏋️\n\n有什么我可以帮你的？不管是训练、饮食还是恢复问题，尽管问我！'
+        ];
+        return responses[Math.floor(Math.random() * responses.length)];
+    },
+
+    // 判断是否需要鼓励
+    isEncouragement(text) {
+        const words = ['加油', '坚持', '好累', '不想练', '放弃', '太难了', '疼', '不想动'];
+        return words.some(w => text.includes(w));
+    },
+
+    getEncouragement() {
+        const responses = [
+            '💪 加油！每一滴汗水都不会白费！\n\n记住：\n- 坚持比完美更重要\n- 每次训练都比不练强\n- 肌肉在休息时生长\n- 你已经比昨天的自己更强了！\n\n🔥 继续保持，你一定可以的！',
+            '🌟 你已经很棒了！能坚持健身就已经超越了大多数人！\n\n累了就适当休息，但不要放弃。休息是为了更好地出发！\n\n记住你的目标，想想坚持下来后的自己，那个画面一定很帅！💪',
+            '🤗 每个人都会有不想练的时候，这很正常！\n\n小建议：\n- 告诉自己"只练10分钟"，往往练着练着就完成了\n- 听一首喜欢的音乐\n- 想想训练后的成就感\n\n你已经走了这么远，不要停下来！🔥'
+        ];
+        return responses[Math.floor(Math.random() * responses.length)];
+    },
+
+    // 默认回复
+    getDefaultResponse(input) {
+        const defaults = [
+            `关于"${input}"这个问题，让我想想...🤔\n\n我目前的知识库可能还没有覆盖到这个话题，但我可以帮你解答以下方面的问题：\n\n🏋️ 训练相关：动作推荐、训练计划、各部位训练\n🍎 饮食相关：营养搭配、食物热量、增肌/减脂饮食\n💪 健身知识：新手入门、恢复拉伸、补剂推荐\n\n你可以试试换个方式提问，或者点击下方的快捷问题按钮！`,
+            `这个问题很好！不过我暂时还没有学到这方面的知识 😅\n\n你可以问我：\n- "新手应该怎么开始健身？"\n- "减脂期间应该怎么吃？"\n- "鸡胸肉的热量是多少？"\n- "胸肌训练推荐"\n\n我会不断学习更多知识来帮助你！💪`
+        ];
+        return defaults[Math.floor(Math.random() * defaults.length)];
+    }
 };
-
-function sendChat() {
-    const input = document.getElementById('chat-input');
-    const message = input.value.trim();
-    if (!message) return;
-    
-    addChatMessage(message, 'user');
-    input.value = '';
-    
-    // 模拟AI回复
-    setTimeout(() => {
-        const response = getAIResponse(message);
-        addChatMessage(response, 'ai');
-    }, 500);
-}
-
-function sendQuickQ(question) {
-    document.getElementById('chat-input').value = question;
-    sendChat();
-}
-
-function addChatMessage(text, sender) {
-    const container = document.getElementById('chat-container');
-    
-    // 隐藏欢迎界面
-    const welcome = container.querySelector('.chat-welcome');
-    if (welcome) welcome.style.display = 'none';
-    
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `chat-message ${sender}`;
-    msgDiv.textContent = text;
-    container.appendChild(msgDiv);
-    container.scrollTop = container.scrollHeight;
-}
-
-function getAIResponse(message) {
-    const lowerMsg = message.toLowerCase();
-    
-    if (lowerMsg.includes('新手') || lowerMsg.includes('开始')) {
-        return AIResponses['新手'];
-    }
-    if (lowerMsg.includes('减脂') || lowerMsg.includes('减肥') || lowerMsg.includes('怎么吃')) {
-        return AIResponses['减脂'];
-    }
-    if (lowerMsg.includes('胸') || lowerMsg.includes('胸肌')) {
-        return AIResponses['胸肌'];
-    }
-    if (lowerMsg.includes('恢复') || lowerMsg.includes('休息') || lowerMsg.includes('酸痛')) {
-        return AIResponses['恢复'];
-    }
-    if (lowerMsg.includes('蛋白') || lowerMsg.includes('吃多少')) {
-        return AIResponses['蛋白'];
-    }
-    
-    return AIResponses['default'];
-}
